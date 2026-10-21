@@ -62,11 +62,33 @@ ui/         shared styles and the protocol-trace renderer
 issuer/     server.js (fetch-style handler) + public/ UI
 verifier/   server.js (fetch-style handler) + public/ UI
 wallet/     static site: index.html, offer.html, authorize.html, wallet.js, store.js (IndexedDB)
-scripts/    serve.js runs all three locally
+scripts/    serve.js runs all three locally; build.js builds dist/ for deployment
+deploy/     Cloudflare Workers + Durable Object wrappers and Wrangler configs
 test/       protocol, interop and browser end-to-end tests
 ```
 
-The servers export `handle(Request) → Response`, the Fetch API shape, so they can move to an edge runtime such as Cloudflare Workers unchanged. Their state lives in memory for now.
+The servers export `handle(Request) → Response`, the Fetch API shape, and keep state behind a small async store (`lib/kv.js`): in memory under Node, in Durable Object storage on Cloudflare.
+
+## Deploy
+
+`.github/workflows/deploy.yml` deploys on every push to `main`:
+
+| App | Where |
+|-----|-------|
+| Issuer | Cloudflare Worker `vc-lab-issuer.<your-subdomain>.workers.dev` |
+| Verifier | Cloudflare Worker `vc-lab-verifier.<your-subdomain>.workers.dev` |
+| Wallet | GitHub Pages `<owner>.github.io/vc-lab` |
+
+On Cloudflare each server runs the same handler as locally, inside one Durable Object that gives it persistent storage (`deploy/`). The issuer creates its signing key on first use and keeps it there, so no key needs to be managed. The verifier reaches the issuer's key metadata through a service binding, because one workers.dev Worker can't fetch another over the internet. Everything fits the free plans.
+
+One-time setup:
+
+1. **Cloudflare:** create a free account and open **Workers & Pages** once, which asks you to choose your `workers.dev` subdomain. Then create an API token: **My Profile → API Tokens → Create Token → "Edit Cloudflare Workers"** template, limited to your account. Note your **Account ID**, shown on the account home page.
+2. **GitHub secrets:** in the repo, **Settings → Secrets and variables → Actions → New repository secret**. Add `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
+3. **GitHub Pages:** **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+4. Run **Actions → Deploy → Run workflow**, or push to `main`. The run summary lists the three URLs.
+
+To try the Cloudflare build locally, build with local URLs and run both Workers under `wrangler dev` on ports 8787 and 8788. `test/e2e.js` can then test them through `E2E_ISSUER_URL`, `E2E_WALLET_URL` and `E2E_VERIFIER_URL`.
 
 ## Tests
 
@@ -83,4 +105,3 @@ The negative cases cover single-use codes and nonces, over-disclosure, a wrong n
 - Authorization code flow with PAR, PKCE and DPoP; transaction codes.
 - Signed requests (`x509_hash` / `request_uri`), encrypted responses (`direct_post.jwt`), cross-device QR codes.
 - Status lists, key and wallet attestations: the rest of the HAIP profile.
-- Persistent server state and a public deployment.

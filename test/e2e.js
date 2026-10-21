@@ -6,9 +6,14 @@ import { join } from "node:path";
 import { chromium } from "playwright";
 import { start } from "../scripts/serve.js";
 
-const urls = { issuerUrl: "http://localhost:4201", walletUrl: "http://localhost:4202", verifierUrl: "http://localhost:4203" };
+// Against the local Node servers by default. With E2E_ISSUER_URL, E2E_WALLET_URL and E2E_VERIFIER_URL set,
+// it tests already-running apps instead (e.g. `wrangler dev` workers and a built wallet).
+const external = !!process.env.E2E_ISSUER_URL;
+const urls = external
+  ? { issuerUrl: process.env.E2E_ISSUER_URL, walletUrl: process.env.E2E_WALLET_URL, verifierUrl: process.env.E2E_VERIFIER_URL }
+  : { issuerUrl: "http://localhost:4201", walletUrl: "http://localhost:4202", verifierUrl: "http://localhost:4203" };
 const shots = process.env.SHOTS;
-const lab = await start({ ...urls, keyFile: join(await mkdtemp(join(tmpdir(), "vclab-")), "k.json") });
+const lab = external ? { close: async () => {} } : await start({ ...urls, keyFile: join(await mkdtemp(join(tmpdir(), "vclab-")), "k.json") });
 const browser = await chromium.launch(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {});
 const page = await browser.newPage({ viewport: { width: 1280, height: 1000 } });
 const errors = [];

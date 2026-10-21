@@ -1,0 +1,11 @@
+// Deployed by .github/workflows/deploy.yml with --var WALLET_URL and --var ISSUER_URL.
+{
+  "name": "vc-lab-issuer",
+  "main": "issuer.worker.js",
+  "compatibility_date": "2025-09-01",
+  "workers_dev": true,
+  "assets": { "directory": "../dist/issuer", "binding": "ASSETS" },
+  "durable_objects": { "bindings": [{ "name": "STATE", "class_name": "IssuerState" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["IssuerState"] }],
+  "observability": { "enabled": true }
+}

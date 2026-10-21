@@ -5,16 +5,17 @@ import { CLAIMS, FORMAT, VCT, claimLabel } from "../lib/contact.js";
 import { decodeJwt, verifyJwt } from "../lib/jose.js";
 import { cors, error, json, readForm, route } from "../lib/http.js";
 import { resolveClaims, split, verifyKeyBinding } from "../lib/sdjwt.js";
+import { memoryStore } from "../lib/kv.js";
 
 const TTL = 10 * 60 * 1000;
 const QUERY_ID = "contact";
 
-export function createVerifier({ verifierUrl, walletUrl, trustedIssuers, fetchImpl = fetch }) {
+export function createVerifier({ verifierUrl, walletUrl, trustedIssuers, fetchImpl = fetch, store = memoryStore() }) {
   const responseUri = `${verifierUrl}/response`;
   const clientId = `redirect_uri:${responseUri}`;
-  const txs = new Map(); // state -> transaction
-
-  const sweep = () => { const now = Date.now(); for (const [k, t] of txs) if (now - t.created > TTL) txs.delete(k); };
+  // tx:<state> -> { state, nonce, claims, status, request, responseCode?, steps?, result?, wallet_error? }
+  const getTx = (state) => (state ? store.get(`tx:${state}`) : undefined);
+  const saveTx = (tx) => store.put(`tx:${tx.state}`, tx, TTL);
 
   const routes = {
     "POST /api/requests": async (req) => {
@@ -22,7 +23,6 @@ export function createVerifier({ verifierUrl, walletUrl, trustedIssuers, fetchIm
       const known = CLAIMS.map((c) => c.name);
       const claims = Array.isArray(body?.claims) ? [...new Set(body.claims)].filter((c) => known.includes(c)) : [];
       if (!claims.length) return error(400, "invalid_request", "Pick at least one claim to request");
-      sweep();
       const state = randomB64u(16);
       const nonce = randomB64u(16);
       const dcqlQuery = {
@@ -40,12 +40,12 @@ export function createVerifier({ verifierUrl, walletUrl, trustedIssuers, fetchIm
       };
       const params = new URLSearchParams();
       for (const [k, v] of Object.entries(request)) params.set(k, typeof v === "string" ? v : JSON.stringify(v));
-      txs.set(state, { state, nonce, claims, status: "pending", created: Date.now(), request });
+      await saveTx({ state, nonce, claims, status: "pending", request });
       return json({ id: state, wallet_url: `${walletUrl}/authorize?${params}`, request });
     },
 
-    "GET /api/requests/:id": (req, { id }) => {
-      const tx = txs.get(id);
+    "GET /api/requests/:id": async (req, { id }) => {
+      const tx = await getTx(id);
       if (!tx) return error(404, "not_found", "Unknown or expired request");
       if (tx.status === "pending") return json({ status: "pending", claims: tx.claims, request: tx.request });
       // The result is released only to whoever holds the response_code the wallet was redirected with.
@@ -57,22 +57,27 @@ export function createVerifier({ verifierUrl, walletUrl, trustedIssuers, fetchIm
     // Response URI: the wallet POSTs here (application/x-www-form-urlencoded).
     "POST /response": async (req) => {
       const form = await readForm(req);
-      const tx = txs.get(form.get("state"));
+      const tx = await getTx(form.get("state"));
       if (!tx) return cors(error(400, "invalid_request", "Unknown or expired state"));
       if (tx.status !== "pending") return cors(error(400, "invalid_request", "This request was already answered"));
+      // Claim the transaction before any slow work, so a second POST for the same state is refused.
       tx.responseCode = randomB64u(16);
+      tx.status = "verifying";
+      await saveTx(tx);
       const redirect = { redirect_uri: `${verifierUrl}/#response_code=${tx.responseCode}` };
 
       if (form.get("error")) {
         tx.status = "declined";
         tx.wallet_error = { error: form.get("error"), error_description: form.get("error_description") || "" };
         tx.steps = [];
+        await saveTx(tx);
         return cors(json(redirect));
       }
       const { ok, steps, claims } = await verifyResponse(tx, form.get("vp_token"));
       tx.status = ok ? "verified" : "rejected";
       tx.steps = steps;
       tx.result = ok ? claims : null;
+      await saveTx(tx);
       return cors(json(redirect));
     },
   };

@@ -1,0 +1,107 @@
+# Deploys VC Lab on every push to main:
+#   issuer   -> Cloudflare Worker  vc-lab-issuer.<subdomain>.workers.dev
+#   verifier -> Cloudflare Worker  vc-lab-verifier.<subdomain>.workers.dev
+#   wallet   -> GitHub Pages       <owner>.github.io/<repo>
+# Needs repo secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID, and Pages set to "GitHub Actions".
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.pages-deploy.outputs.page_url }}
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+      WRANGLER_SEND_METRICS: "false"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm test
+
+      - name: Configure GitHub Pages
+        id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Work out the public URLs
+        id: urls
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error::Add the CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID repository secrets (see README, Deploy)."
+            exit 1
+          fi
+          sub=$(curl -fsS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/subdomain" | jq -r '.result.subdomain // empty') || true
+          if [ -z "$sub" ]; then
+            echo "::error::Couldn't read your workers.dev subdomain. Check the token's permissions, and open Workers & Pages in the Cloudflare dashboard once to choose a subdomain."
+            exit 1
+          fi
+          {
+            echo "issuer=https://vc-lab-issuer.$sub.workers.dev"
+            echo "verifier=https://vc-lab-verifier.$sub.workers.dev"
+            echo "wallet=${{ steps.pages.outputs.base_url }}"
+          } | tee -a "$GITHUB_OUTPUT"
+
+      - name: Build static files
+        run: node scripts/build.js
+        env:
+          ISSUER_URL: ${{ steps.urls.outputs.issuer }}
+          VERIFIER_URL: ${{ steps.urls.outputs.verifier }}
+          WALLET_URL: ${{ steps.urls.outputs.wallet }}
+
+      - name: Deploy the issuer
+        run: >-
+          npx wrangler deploy -c deploy/issuer.jsonc
+          --var "WALLET_URL:${{ steps.urls.outputs.wallet }}"
+          --var "ISSUER_URL:${{ steps.urls.outputs.issuer }}"
+
+      - name: Deploy the verifier
+        run: >-
+          npx wrangler deploy -c deploy/verifier.jsonc
+          --var "WALLET_URL:${{ steps.urls.outputs.wallet }}"
+          --var "ISSUER_URL:${{ steps.urls.outputs.issuer }}"
+          --var "VERIFIER_URL:${{ steps.urls.outputs.verifier }}"
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/wallet
+
+      - name: Deploy the wallet to GitHub Pages
+        id: pages-deploy
+        uses: actions/deploy-pages@v4
+
+      - name: Smoke test
+        run: |
+          sleep 5
+          curl -fsS --retry 5 --retry-delay 3 "${{ steps.urls.outputs.issuer }}/.well-known/openid-credential-issuer" > /dev/null
+          curl -fsS --retry 5 --retry-delay 3 "${{ steps.urls.outputs.verifier }}/" > /dev/null
+          {
+            echo "| App | URL |"
+            echo "|-----|-----|"
+            echo "| Issuer | ${{ steps.urls.outputs.issuer }} |"
+            echo "| Wallet | ${{ steps.urls.outputs.wallet }} |"
+            echo "| Verifier | ${{ steps.urls.outputs.verifier }} |"
+          } >> "$GITHUB_STEP_SUMMARY"

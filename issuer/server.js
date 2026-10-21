@@ -5,27 +5,25 @@ import { CLAIMS, CONFIG_ID, FORMAT, PRE_AUTH_GRANT, VCT } from "../lib/contact.j
 import { decodeJwt, exportPublicJwk, importPublicJwk, jwkThumbprint, verifyJwt } from "../lib/jose.js";
 import { issue } from "../lib/sdjwt.js";
 import { cors, error, json, readForm, route } from "../lib/http.js";
+import { memoryStore, take } from "../lib/kv.js";
 
 const TTL = 5 * 60 * 1000;
+const OFFER_TTL = 24 * 3600 * 1000; // offers stay readable for a day so the issuer page can show their log
 const CREDENTIAL_LIFETIME = 365 * 24 * 3600;
 
-export async function createIssuer({ issuerUrl, walletUrl, signingKey }) {
+export async function createIssuer({ issuerUrl, walletUrl, signingKey, store = memoryStore() }) {
   const publicJwk = await exportPublicJwk(signingKey.publicKey);
   const kid = await jwkThumbprint(publicJwk);
 
-  // In-memory state. Each entry expires after TTL; codes, tokens and nonces are single-use.
-  const offers = new Map();   // offerId -> { claims, code, events[], created }
-  const codes = new Map();    // pre-authorized code -> offerId
-  const tokens = new Map();   // access token -> { offerId, expires }
-  const nonces = new Map();   // c_nonce -> expires
-
-  const log = (offer, step, detail = {}) => offer?.events.push({ at: Date.now(), step, ...detail });
-  const sweep = () => {
-    const now = Date.now();
-    for (const [k, o] of offers) if (now - o.created > 24 * 3600 * 1000) { offers.delete(k); codes.delete(o.code); }
-    for (const [k, t] of tokens) if (t.expires < now) tokens.delete(k);
-    for (const [k, exp] of nonces) if (exp < now) nonces.delete(k);
-  };
+  // State, all with expiry. Codes, tokens and nonces are single-use.
+  //   offer:<id> -> { claims, code, events[] }   code:<code> -> offerId
+  //   token:<access token> -> offerId             nonce:<c_nonce> -> true
+  async function log(id, step, detail = {}) {
+    const offer = await store.get(`offer:${id}`);
+    if (!offer) return;
+    offer.events.push({ at: Date.now(), step, ...detail });
+    await store.put(`offer:${id}`, offer, OFFER_TTL);
+  }
 
   const issuerMetadata = {
     credential_issuer: issuerUrl,
@@ -65,30 +63,27 @@ export async function createIssuer({ issuerUrl, walletUrl, signingKey }) {
         if (v.length > 200) return error(400, "invalid_request", `${label} is too long`);
         claims[name] = v;
       }
-      sweep();
       const id = randomB64u(12);
       const code = randomB64u(24);
-      const offer = { claims, code, events: [], created: Date.now() };
-      offers.set(id, offer);
-      codes.set(code, id);
-      const credentialOffer = offerJson(code);
       const offerUri = `${issuerUrl}/offers/${id}`;
+      await store.put(`offer:${id}`, { claims, code, events: [{ at: Date.now(), step: "offer_created", offer_uri: offerUri }] }, OFFER_TTL);
+      await store.put(`code:${code}`, id, TTL);
+      const credentialOffer = offerJson(code);
       const walletLink = `${walletUrl}/offer?credential_offer_uri=${encodeURIComponent(offerUri)}`;
-      log(offer, "offer_created", { offer_uri: offerUri });
       return json({ id, offer_uri: offerUri, wallet_link: walletLink, credential_offer: credentialOffer });
     },
 
-    "GET /api/offers/:id/events": (req, { id }) => {
-      const offer = offers.get(id);
+    "GET /api/offers/:id/events": async (req, { id }) => {
+      const offer = await store.get(`offer:${id}`);
       if (!offer) return error(404, "not_found", "Unknown offer");
       return json({ claims: offer.claims, events: offer.events });
     },
 
     // --- OpenID4VCI endpoints called by the wallet ---
-    "GET /offers/:id": (req, { id }) => {
-      const offer = offers.get(id);
-      if (!offer) return error(404, "not_found", "Unknown or expired credential offer");
-      log(offer, "offer_fetched");
+    "GET /offers/:id": async (req, { id }) => {
+      const offer = await store.get(`offer:${id}`);
+      if (!offer || (await store.get(`code:${offer.code}`)) === undefined) return cors(error(404, "not_found", "Unknown, used or expired credential offer"));
+      await log(id, "offer_fetched");
       return cors(json(offerJson(offer.code)));
     },
 
@@ -100,28 +95,25 @@ export async function createIssuer({ issuerUrl, walletUrl, signingKey }) {
     "POST /token": async (req) => {
       const form = await readForm(req);
       if (form.get("grant_type") !== PRE_AUTH_GRANT) return cors(error(400, "unsupported_grant_type", "Only the pre-authorized code grant is supported"));
-      const code = form.get("pre-authorized_code");
-      const id = codes.get(code);
-      const offer = offers.get(id);
-      if (!offer || Date.now() - offer.created > TTL) return cors(error(400, "invalid_grant", "Unknown, used or expired pre-authorized code"));
-      codes.delete(code); // single use
+      const id = await take(store, `code:${form.get("pre-authorized_code")}`);
+      if (id === undefined) return cors(error(400, "invalid_grant", "Unknown, used or expired pre-authorized code"));
       const accessToken = randomB64u(32);
-      tokens.set(accessToken, { offerId: id, expires: Date.now() + TTL });
-      log(offer, "token_issued");
+      await store.put(`token:${accessToken}`, id, TTL);
+      await log(id, "token_issued");
       return cors(json({ access_token: accessToken, token_type: "Bearer", expires_in: TTL / 1000 }, { "Cache-Control": "no-store" }));
     },
 
-    "POST /nonce": () => {
+    "POST /nonce": async () => {
       const cNonce = randomB64u(24);
-      nonces.set(cNonce, Date.now() + TTL);
+      await store.put(`nonce:${cNonce}`, true, TTL);
       return cors(json({ c_nonce: cNonce }, { "Cache-Control": "no-store" }));
     },
 
     "POST /credential": async (req) => {
-      const auth = req.headers.get("authorization") || "";
-      const token = tokens.get(auth.replace(/^Bearer\s+/i, ""));
-      if (!token || token.expires < Date.now()) return cors(error(401, "invalid_token", "Missing or expired access token", { "WWW-Authenticate": 'Bearer error="invalid_token"' }));
-      const offer = offers.get(token.offerId);
+      const tokenKey = `token:${(req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "")}`;
+      const offerId = await store.get(tokenKey);
+      const offer = offerId === undefined ? undefined : await store.get(`offer:${offerId}`);
+      if (!offer) return cors(error(401, "invalid_token", "Missing or expired access token", { "WWW-Authenticate": 'Bearer error="invalid_token"' }));
       const body = await req.json().catch(() => null);
       if (body?.credential_configuration_id !== CONFIG_ID) return cors(error(400, "invalid_credential_request", `credential_configuration_id must be ${CONFIG_ID}`));
       const proofs = body?.proofs?.jwt;
@@ -138,17 +130,15 @@ export async function createIssuer({ issuerUrl, walletUrl, signingKey }) {
         if (payload.aud !== issuerUrl) throw new Error(`aud must be ${issuerUrl}`);
         const now = Math.floor(Date.now() / 1000);
         if (typeof payload.iat !== "number" || Math.abs(now - payload.iat) > 300) throw new Error("iat is missing or not recent");
-        const exp = nonces.get(payload.nonce);
-        if (!exp || exp < Date.now()) throw Object.assign(new Error("c_nonce is unknown, used or expired"), { code: "invalid_nonce" });
-        nonces.delete(payload.nonce);
+        if (!(await take(store, `nonce:${payload.nonce}`))) throw Object.assign(new Error("c_nonce is unknown, used or expired"), { code: "invalid_nonce" });
         holderJwk = { kty: header.jwk.kty, crv: header.jwk.crv, x: header.jwk.x, y: header.jwk.y };
-        log(offer, "proof_verified", { holder_key: holderJwk });
+        await log(offerId, "proof_verified", { holder_key: holderJwk });
       } catch (e) {
-        log(offer, "proof_rejected", { reason: e.message });
+        await log(offerId, "proof_rejected", { reason: e.message });
         return cors(error(400, e.code || "invalid_proof", e.message));
       }
 
-      tokens.delete(auth.replace(/^Bearer\s+/i, "")); // one credential per offer
+      await store.delete(tokenKey); // one credential per offer
       const now = Math.floor(Date.now() / 1000);
       const { sdJwt, disclosures } = await issue({
         header: { typ: "dc+sd-jwt", kid },
@@ -156,7 +146,7 @@ export async function createIssuer({ issuerUrl, walletUrl, signingKey }) {
         sdClaims: offer.claims,
         privateKey: signingKey.privateKey,
       });
-      log(offer, "credential_issued", { disclosures: disclosures.map(({ name, digest }) => ({ name, digest })) });
+      await log(offerId, "credential_issued", { disclosures: disclosures.map(({ name, digest }) => ({ name, digest })) });
       return cors(json({ credentials: [{ credential: sdJwt }] }, { "Cache-Control": "no-store" }));
     },
   };

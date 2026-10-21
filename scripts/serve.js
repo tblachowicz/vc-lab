@@ -28,7 +28,7 @@ export async function loadIssuerKey(file = join(ROOT, ".keys", "issuer.jwk.json"
 }
 
 // Static files: the app's own folder, plus the shared /lib and /ui folders.
-async function serveStatic(dir, pathname) {
+export async function serveStatic(dir, pathname) {
   let base = dir, rel = pathname;
   if (pathname.startsWith("/lib/")) { base = join(ROOT, "lib"); rel = pathname.slice(4); }
   else if (pathname.startsWith("/ui/")) { base = join(ROOT, "ui"); rel = pathname.slice(3); }
@@ -44,7 +44,7 @@ async function serveStatic(dir, pathname) {
   return new Response("Not found", { status: 404, headers: { "Content-Type": "text/plain" } });
 }
 
-function listen(port, handler) {
+export function listen(port, handler) {
   const server = createServer(async (req, res) => {
     try {
       const host = req.headers.host || `localhost:${port}`;

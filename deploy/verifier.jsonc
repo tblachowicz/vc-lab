@@ -1,0 +1,12 @@
+// Deployed by .github/workflows/deploy.yml with --var WALLET_URL, ISSUER_URL and VERIFIER_URL.
+{
+  "name": "vc-lab-verifier",
+  "main": "verifier.worker.js",
+  "compatibility_date": "2025-09-01",
+  "workers_dev": true,
+  "assets": { "directory": "../dist/verifier", "binding": "ASSETS" },
+  "durable_objects": { "bindings": [{ "name": "STATE", "class_name": "VerifierState" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["VerifierState"] }],
+  "services": [{ "binding": "ISSUER", "service": "vc-lab-issuer" }],
+  "observability": { "enabled": true }
+}
