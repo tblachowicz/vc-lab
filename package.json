@@ -1,0 +1,19 @@
+{
+  "name": "vc-lab",
+  "private": true,
+  "type": "module",
+  "description": "An SD-JWT VC issuer, web wallet and verifier speaking OpenID4VCI and OpenID4VP",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node scripts/serve.js",
+    "test": "node --test test/protocol.test.js test/interop.test.js",
+    "e2e": "node test/e2e.js"
+  },
+  "devDependencies": {
+    "@sd-jwt/crypto-nodejs": "^0.19.0",
+    "@sd-jwt/sd-jwt-vc": "^0.23.0",
+    "playwright": "1.56.1"
+  }
+}

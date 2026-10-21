@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en" data-app="wallet">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>VC Lab Wallet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="./ui/lab.css">
+<link rel="stylesheet" href="./wallet.css">
+</head>
+<body>
+<div class="wrap narrow">
+  <div class="labbar" id="labbar"></div>
+  <header class="app">
+    <div class="brand">
+      <div class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3z"/><path d="M3 9h18M15.5 14h2.5"/></svg></div>
+      <h1>Wallet</h1>
+    </div>
+  </header>
+  <main class="screen" id="screen" aria-live="polite"></main>
+  <section class="panel" id="trace" hidden aria-label="Protocol trace">
+    <div class="trace-hd">
+      <div class="trace-title"><span class="eyebrow trace-eyebrow"></span><h2 class="trace-heading"></h2></div>
+      <span class="status-pill"></span>
+    </div>
+    <ol class="steps"></ol>
+  </section>
+  <p class="foot">Credentials and their keys stay in this browser, in IndexedDB. Each credential gets its own non-extractable P-256 key, so the browser can sign with it but no script can read it out.</p>
+</div>
+<script type="module" src="./wallet.js"></script>
+</body>
+</html>

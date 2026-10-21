@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en" data-app="issuer">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>VC Lab Issuer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="./ui/lab.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="labbar" id="labbar"></div>
+  <header class="app">
+    <div class="brand">
+      <div class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2.2"/><path d="M5.8 16.2c.6-1.6 1.8-2.4 3.2-2.4s2.6.8 3.2 2.4M14.5 10h3.5M14.5 13.5h3.5"/></svg></div>
+      <h1>Issuer</h1>
+    </div>
+    <p class="lede">Enter the details to put in a contact credential. The issuer signs them as an SD-JWT VC and hands it to your wallet over OpenID4VCI, using a pre-authorized code so no login is needed.</p>
+  </header>
+
+  <div class="bench">
+    <div class="col">
+      <form class="panel" id="form" novalidate>
+        <div class="panel-hd"><h2>Contact details</h2><span class="eyebrow">urn:vc-lab:contact:1</span></div>
+        <div class="panel-bd">
+          <div class="field">
+            <label for="name">Full name</label>
+            <input type="text" id="name" name="name" value="Ada Lovelace" autocomplete="name" required>
+          </div>
+          <div class="field">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" value="ada@example.com" autocomplete="email" required>
+          </div>
+          <div class="field">
+            <label for="phone_number">Phone number</label>
+            <input type="tel" id="phone_number" name="phone_number" value="+44 20 7946 0018" autocomplete="tel" required>
+          </div>
+          <div id="form-msg" aria-live="polite"></div>
+          <button class="btn btn-primary" type="submit" id="issue">Issue credential</button>
+          <p class="hint">Each claim becomes a separate disclosure, so the wallet can later share any of them on its own.</p>
+        </div>
+      </form>
+
+      <section class="panel" id="handoff" hidden aria-live="polite">
+        <div class="panel-bd">
+          <p class="notice ok"><strong>Offer ready.</strong> Open it in the wallet to receive the credential.</p>
+          <div class="field">
+            <span class="label">Credential offer URL</span>
+            <p class="url" id="offer-url"></p>
+          </div>
+          <a class="btn btn-primary" id="open-wallet" href="#">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3z"/><path d="M15 12h3"/></svg>
+            Open in wallet
+          </a>
+          <p class="hint">The pre-authorized code inside is single-use and expires in 5 minutes.</p>
+        </div>
+      </section>
+    </div>
+
+    <section class="panel" id="trace" aria-label="Issuance trace">
+      <div class="trace-hd">
+        <div class="trace-title"><span class="eyebrow trace-eyebrow"></span><h2 class="trace-heading"></h2></div>
+        <span class="status-pill"></span>
+      </div>
+      <ol class="steps"></ol>
+    </section>
+  </div>
+
+  <p class="foot">OpenID4VCI 1.0, pre-authorized code flow. Steps 3 to 5 come from the issuer's own log, so they fill in once the wallet has called the issuer. Come back to this page after the wallet is done to see them.</p>
+</div>
+<script type="module" src="./issuer.js"></script>
+</body>
+</html>

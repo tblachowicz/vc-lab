@@ -1,0 +1,47 @@
+/* Wallet-only styles on top of ui/lab.css */
+.screen { display: grid; gap: 16px; }
+.screen-hd { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.screen-hd h2 { font-size: 1.25rem; }
+
+/* Credential card: colours come from the issuer's display metadata */
+.vc-card {
+  border-radius: 14px; padding: 18px 18px 16px; display: grid; gap: 14px; min-width: 0;
+  background: var(--card-bg, var(--accent)); color: var(--card-fg, var(--on-accent));
+  box-shadow: 0 10px 30px -14px rgba(0, 0, 0, .45);
+  position: relative; overflow: hidden;
+}
+.vc-card::after { content: ""; position: absolute; right: -40px; top: -40px; width: 160px; height: 160px; border-radius: 50%; border: 22px solid currentColor; opacity: .07; pointer-events: none; }
+.vc-top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.vc-name { font: 700 1.15rem/1.2 var(--f-display); }
+.vc-issuer { font: 500 11px var(--f-mono); letter-spacing: .06em; text-transform: uppercase; opacity: .8; }
+.vc-claims { display: grid; gap: 8px; margin: 0; }
+.vc-claims div { display: grid; gap: 1px; min-width: 0; }
+.vc-claims dt { font-size: 11.5px; opacity: .75; text-transform: uppercase; letter-spacing: .06em; }
+.vc-claims dd { margin: 0; font-size: 16px; font-weight: 700; overflow-wrap: anywhere; }
+.vc-meta { font: 11px var(--f-mono); opacity: .75; }
+.vc-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Consent */
+.who-asks { display: flex; gap: 12px; align-items: center; }
+.who-asks .avatar { width: 42px; height: 42px; border-radius: 10px; background: var(--sunk); border: 1px solid var(--line); display: grid; place-items: center; font: 700 16px var(--f-display); color: var(--muted); flex: none; }
+.who-asks strong { display: block; font: 700 1.1rem/1.2 var(--f-display); overflow-wrap: anywhere; }
+.badge { display: inline-flex; align-items: center; gap: 6px; font: 500 11px var(--f-mono); letter-spacing: .04em; text-transform: uppercase; padding: 2px 8px; border-radius: 4px; background: var(--sunk); color: var(--muted); border: 1px solid var(--line); }
+.badge.warn { color: var(--wallet); border-color: var(--wallet); background: var(--wallet-soft); }
+.share-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.share-list li { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px 14px; border-top: 1px solid var(--line); background: var(--surface); }
+.share-list li:first-child { border-top: 0; }
+.share-list .ico { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; }
+.share-list li.on .ico { background: var(--accent); color: var(--on-accent); }
+.share-list li.off { background: var(--sunk); }
+.share-list li.off .ico { border: 1.5px solid var(--line); color: var(--muted); }
+.share-list .lbl { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.share-list .val { font-weight: 700; overflow-wrap: anywhere; }
+.share-list li.off .val { color: var(--muted); font-weight: 400; }
+.share-list .tag { font: 500 11px var(--f-mono); color: var(--muted); }
+.pick { display: grid; gap: 8px; }
+.pick label { display: flex; gap: 10px; align-items: center; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; font-weight: 400; cursor: pointer; }
+.pick label:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.pick input { accent-color: var(--accent); }
+
+.empty { text-align: left; display: grid; gap: 10px; padding: 22px 18px; }
+.empty p { margin: 0; color: var(--muted); }
