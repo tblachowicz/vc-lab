@@ -71,24 +71,26 @@ The servers export `handle(Request) → Response`, the Fetch API shape, and keep
 
 ## Deploy
 
-`.github/workflows/deploy.yml` deploys on every push to `main`:
+`.github/workflows/deploy.yml` deploys on every push to `main`, all three apps as Cloudflare Workers on custom domains:
 
-| App | Where |
-|-----|-------|
-| Issuer | Cloudflare Worker `vc-lab-issuer.<your-subdomain>.workers.dev` |
-| Verifier | Cloudflare Worker `vc-lab-verifier.<your-subdomain>.workers.dev` |
-| Wallet | GitHub Pages `<owner>.github.io/vc-lab` |
+| App | URL |
+|-----|-----|
+| Issuer | https://vc-issuer.loft70.pro |
+| Wallet | https://vc-wallet.loft70.pro (static assets only) |
+| Verifier | https://vc-verifier.loft70.pro |
 
-On Cloudflare each server runs the same handler as locally, inside one Durable Object that gives it persistent storage (`deploy/`). The issuer creates its signing key on first use and keeps it there, so no key needs to be managed. The verifier reaches the issuer's key metadata through a service binding, because one workers.dev Worker can't fetch another over the internet. Everything fits the free plans.
+The hostnames appear twice: as `routes` in `deploy/*.jsonc` and as the URLs at the top of the workflow. Change both together. `workers.dev` and preview URLs are switched off.
+
+The issuer and verifier run the same handlers as locally, each inside one Durable Object that gives it persistent storage (`deploy/`). The issuer creates its signing key on first use and keeps it there, so no key needs to be managed. The verifier reaches the issuer's key metadata through a service binding, because one Worker on an account can't fetch another of its Workers over the internet. Everything fits the free plans.
 
 One-time setup:
 
-1. **Cloudflare:** create a free account and open **Workers & Pages** once, which asks you to choose your `workers.dev` subdomain. Then create an API token: **My Profile → API Tokens → Create Token → "Edit Cloudflare Workers"** template, limited to your account. Note your **Account ID**, shown on the account home page.
-2. **GitHub secrets:** in the repo, **Settings → Secrets and variables → Actions → New repository secret**. Add `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
-3. **GitHub Pages:** **Settings → Pages → Build and deployment → Source: GitHub Actions**.
-4. Run **Actions → Deploy → Run workflow**, or push to `main`. The run summary lists the three URLs.
+1. **Domain:** add the domain to Cloudflare (**Add a site**, free plan) and switch its nameservers at the registrar to the two Cloudflare gives you. Custom domains on Workers need the zone to be active on the same account.
+2. **API token:** **My Profile → API Tokens → Create Token → "Edit Cloudflare Workers"** template, covering your account and the domain's zone. Note your **Account ID** (the 32-character string in the dashboard URL).
+3. **GitHub secrets:** in the repo, **Settings → Secrets and variables → Actions**. Add `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
+4. Push to `main`, or run **Actions → Deploy → Run workflow**. Cloudflare creates the DNS records and certificates for the three hostnames; the run summary lists the URLs.
 
-To try the Cloudflare build locally, build with local URLs and run both Workers under `wrangler dev` on ports 8787 and 8788. `test/e2e.js` can then test them through `E2E_ISSUER_URL`, `E2E_WALLET_URL` and `E2E_VERIFIER_URL`.
+To try the Cloudflare build locally, build with local URLs and run the three Workers under `wrangler dev` (issuer 8787, verifier 8788, wallet 8789, the wallet with its own `--persist-to` folder). `test/e2e.js` can then test them through `E2E_ISSUER_URL`, `E2E_WALLET_URL` and `E2E_VERIFIER_URL`.
 
 ## Tests
 

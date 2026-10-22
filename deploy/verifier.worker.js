@@ -10,7 +10,7 @@ export class VerifierState extends DurableObject {
       verifierUrl: env.VERIFIER_URL || new URL(request.url).origin,
       walletUrl: env.WALLET_URL,
       trustedIssuers: [env.ISSUER_URL],
-      // A Worker can't fetch another workers.dev Worker on the same account over the internet,
+      // A Worker can't reliably fetch another Worker on the same account or zone over the internet,
       // so calls to the issuer go through the ISSUER service binding.
       fetchImpl: (url, init) => (env.ISSUER && new URL(url).origin === new URL(env.ISSUER_URL).origin ? env.ISSUER.fetch(url, init) : fetch(url, init)),
       store: doStore(this.ctx.storage),

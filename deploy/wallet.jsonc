@@ -1,0 +1,9 @@
+// The wallet is a static site: an assets-only Worker, no script. /offer serves offer.html.
+{
+  "name": "vc-lab-wallet",
+  "compatibility_date": "2025-09-01",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "vc-wallet.loft70.pro", "custom_domain": true }],
+  "assets": { "directory": "../dist/wallet", "html_handling": "auto-trailing-slash" }
+}

@@ -3,7 +3,10 @@
   "name": "vc-lab-verifier",
   "main": "verifier.worker.js",
   "compatibility_date": "2025-09-01",
-  "workers_dev": true,
+  // Served only on the custom domain: workers.dev and preview URLs would show the account name.
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "vc-verifier.loft70.pro", "custom_domain": true }],
   "assets": { "directory": "../dist/verifier", "binding": "ASSETS" },
   "durable_objects": { "bindings": [{ "name": "STATE", "class_name": "VerifierState" }] },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["VerifierState"] }],

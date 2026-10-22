@@ -19,5 +19,4 @@ for (const [app, src] of Object.entries(apps)) {
   await cp(join(ROOT, "ui"), join(out, "ui"), { recursive: true });
   await writeFile(join(out, "lab.json"), JSON.stringify(urls));
 }
-await writeFile(join(ROOT, "dist", "wallet", ".nojekyll"), "");
 console.log("Built dist/ for", urls);
