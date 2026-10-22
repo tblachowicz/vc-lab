@@ -53,10 +53,18 @@ jobs:
             echo "::error::Add the CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID repository secrets (see README, Deploy)."
             exit 1
           fi
-          sub=$(curl -fsS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/subdomain" | jq -r '.result.subdomain // empty') || true
+          cf() { curl -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4$1"; }
+          # Cloudflare's error messages name the problem (bad token, wrong account, no subdomain) without echoing secrets.
+          errors() { jq -r '[.errors[]? | "\(.code): \(.message)"] | join("; ")'; }
+          verify=$(cf /user/tokens/verify)
+          if [ "$(jq -r '.success' <<<"$verify")" != "true" ]; then
+            echo "::error::Cloudflare rejected CLOUDFLARE_API_TOKEN: $(errors <<<"$verify")"
+            exit 1
+          fi
+          resp=$(cf "/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/subdomain")
+          sub=$(jq -r '.result.subdomain // empty' <<<"$resp")
           if [ -z "$sub" ]; then
-            echo "::error::Couldn't read your workers.dev subdomain. Check the token's permissions, and open Workers & Pages in the Cloudflare dashboard once to choose a subdomain."
+            echo "::error::No workers.dev subdomain for this account ($(errors <<<"$resp")). Check that CLOUDFLARE_ACCOUNT_ID is the 32-character ID from the dashboard URL, and that Workers & Pages shows a workers.dev subdomain."
             exit 1
           fi
           {
