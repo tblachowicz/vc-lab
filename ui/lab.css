@@ -67,7 +67,8 @@ a { color: var(--accent); }
 
 /* Lab bar: links between the three apps */
 .labbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; padding-block: 12px; border-bottom: 1px solid var(--line); margin-bottom: 8px; font-size: 13px; }
-.labbar .lab-name { font: 700 13px var(--f-display); letter-spacing: .02em; margin-right: auto; }
+.labbar .lab-name { font: 700 13px var(--f-display); letter-spacing: .02em; margin-right: auto; color: var(--ink); padding: 0; border: 0; }
+.labbar a.lab-name:hover { color: var(--accent); border-color: transparent; }
 .labbar nav { display: flex; gap: 4px; flex-wrap: wrap; }
 .labbar a { text-decoration: none; color: var(--muted); padding: 4px 10px; border-radius: 999px; border: 1px solid transparent; display: inline-flex; align-items: center; gap: 6px; }
 .labbar a:hover { color: var(--ink); border-color: var(--line); }

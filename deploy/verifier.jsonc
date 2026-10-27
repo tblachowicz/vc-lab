@@ -6,7 +6,7 @@
   // Served only on the custom domain: workers.dev and preview URLs would show the account name.
   "workers_dev": false,
   "preview_urls": false,
-  "routes": [{ "pattern": "vc-verifier.loft70.net", "custom_domain": true }],
+  "routes": [{ "pattern": "vc-lab-verifier.loft70.net", "custom_domain": true }],
   "assets": { "directory": "../dist/verifier", "binding": "ASSETS" },
   "durable_objects": { "bindings": [{ "name": "STATE", "class_name": "VerifierState" }] },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["VerifierState"] }],

@@ -18,6 +18,7 @@ node scripts/serve.js        # or: npm start
 
 | | |
 |---|---|
+| Home page | http://localhost:3000 |
 | Issuer | http://localhost:3001 |
 | Wallet | http://localhost:3002 |
 | Verifier | http://localhost:3003 |
@@ -62,7 +63,8 @@ ui/         shared styles and the protocol-trace renderer
 issuer/     server.js (fetch-style handler) + public/ UI
 verifier/   server.js (fetch-style handler) + public/ UI
 wallet/     static site: index.html, offer.html, authorize.html, wallet.js, store.js (IndexedDB)
-scripts/    serve.js runs all three locally; build.js builds dist/ for deployment
+home/       VC Lab home page, linking to the three apps
+scripts/    serve.js runs everything locally; build.js builds dist/ for deployment
 deploy/     Cloudflare Workers + Durable Object wrappers and Wrangler configs
 test/       protocol, interop and browser end-to-end tests
 ```
@@ -71,13 +73,14 @@ The servers export `handle(Request) → Response`, the Fetch API shape, and keep
 
 ## Deploy
 
-`.github/workflows/deploy.yml` deploys on every push to `main`, all three apps as Cloudflare Workers on custom domains:
+`.github/workflows/deploy.yml` deploys on every push to `main`, as Cloudflare Workers on custom domains:
 
 | App | URL |
 |-----|-----|
-| Issuer | https://vc-issuer.loft70.net |
-| Wallet | https://vc-wallet.loft70.net (static assets only) |
-| Verifier | https://vc-verifier.loft70.net |
+| Home page | https://vc-lab.loft70.net (static assets only; introduces the lab and links to the apps) |
+| Issuer | https://vc-lab-issuer.loft70.net |
+| Wallet | https://vc-lab-wallet.loft70.net (static assets only) |
+| Verifier | https://vc-lab-verifier.loft70.net |
 
 The hostnames appear twice: as `routes` in `deploy/*.jsonc` and as the URLs at the top of the workflow. Change both together. `workers.dev` and preview URLs are switched off.
 

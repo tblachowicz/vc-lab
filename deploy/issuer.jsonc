@@ -6,7 +6,7 @@
   // Served only on the custom domain: workers.dev and preview URLs would show the account name.
   "workers_dev": false,
   "preview_urls": false,
-  "routes": [{ "pattern": "vc-issuer.loft70.net", "custom_domain": true }],
+  "routes": [{ "pattern": "vc-lab-issuer.loft70.net", "custom_domain": true }],
   "assets": { "directory": "../dist/issuer", "binding": "ASSETS" },
   "durable_objects": { "bindings": [{ "name": "STATE", "class_name": "IssuerState" }] },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["IssuerState"] }],

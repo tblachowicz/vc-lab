@@ -1,0 +1,9 @@
+// VC Lab's home page: an assets-only Worker that introduces the lab and links to the three apps.
+{
+  "name": "vc-lab-home",
+  "compatibility_date": "2025-09-01",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "vc-lab.loft70.net", "custom_domain": true }],
+  "assets": { "directory": "../dist/home", "html_handling": "auto-trailing-slash" }
+}

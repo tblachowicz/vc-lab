@@ -64,6 +64,7 @@ export function listen(port, handler) {
 }
 
 export async function start({
+  homeUrl = process.env.HOME_URL || "http://localhost:3000",
   issuerUrl = process.env.ISSUER_URL || "http://localhost:3001",
   walletUrl = process.env.WALLET_URL || "http://localhost:3002",
   verifierUrl = process.env.VERIFIER_URL || "http://localhost:3003",
@@ -73,7 +74,7 @@ export async function start({
   const verifier = createVerifier({ verifierUrl, walletUrl, trustedIssuers: [issuerUrl] });
   const port = (u) => Number(new URL(u).port) || 80;
   // Every origin serves /lab.json so the UIs can link to each other.
-  const lab = JSON.stringify({ issuer: issuerUrl, wallet: walletUrl, verifier: verifierUrl });
+  const lab = JSON.stringify({ home: homeUrl, issuer: issuerUrl, wallet: walletUrl, verifier: verifierUrl });
   const files = (dir) => (r) => {
     const { pathname } = new URL(r.url);
     if (pathname === "/lab.json") return new Response(lab, { headers: { "Content-Type": "application/json" } });
@@ -81,13 +82,14 @@ export async function start({
   };
   const servers = await Promise.all([
     listen(port(issuerUrl), async (r) => (await issuer.handle(r)) || files(join(ROOT, "issuer", "public"))(r)),
+    listen(port(homeUrl), files(join(ROOT, "home"))),
     listen(port(walletUrl), files(join(ROOT, "wallet"))),
     listen(port(verifierUrl), async (r) => (await verifier.handle(r)) || files(join(ROOT, "verifier", "public"))(r)),
   ]);
-  return { issuerUrl, walletUrl, verifierUrl, close: () => Promise.all(servers.map((s) => new Promise((ok) => s.close(ok)))) };
+  return { homeUrl, issuerUrl, walletUrl, verifierUrl, close: () => Promise.all(servers.map((s) => new Promise((ok) => s.close(ok)))) };
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const { issuerUrl, walletUrl, verifierUrl } = await start();
-  console.log(`VC Lab is running:\n  Issuer    ${issuerUrl}\n  Wallet    ${walletUrl}\n  Verifier  ${verifierUrl}`);
+  const { homeUrl, issuerUrl, walletUrl, verifierUrl } = await start();
+  console.log(`VC Lab is running:\n  Home      ${homeUrl}\n  Issuer    ${issuerUrl}\n  Wallet    ${walletUrl}\n  Verifier  ${verifierUrl}`);
 }

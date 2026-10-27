@@ -10,7 +10,7 @@ import { CONFIG_ID, PRE_AUTH_GRANT } from "../lib/contact.js";
 import { exportPublicJwk, generateKeyPair, signJwt } from "../lib/jose.js";
 import { decodeDisclosure, present, split } from "../lib/sdjwt.js";
 
-const urls = { issuerUrl: "http://localhost:4101", walletUrl: "http://localhost:4102", verifierUrl: "http://localhost:4103" };
+const urls = { homeUrl: "http://localhost:4100", issuerUrl: "http://localhost:4101", walletUrl: "http://localhost:4102", verifierUrl: "http://localhost:4103" };
 const post = (url, body, headers = {}) => fetch(url, { method: "POST", body, headers });
 const postJson = (url, obj, headers = {}) => post(url, JSON.stringify(obj), { "Content-Type": "application/json", ...headers });
 const form = (obj) => ({ body: new URLSearchParams(obj).toString(), headers: { "Content-Type": "application/x-www-form-urlencoded" } });

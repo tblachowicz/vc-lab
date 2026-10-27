@@ -24,7 +24,7 @@ export async function labBar(current) {
   try { urls = await (await fetch("./lab.json", { cache: "no-store" })).json(); } catch { /* standalone */ }
   const apps = [["issuer", "Issuer"], ["wallet", "Wallet"], ["verifier", "Verifier"]];
   bar.replaceChildren(
-    h("span", { class: "lab-name" }, "VC Lab"),
+    urls.home ? h("a", { class: "lab-name", href: `${urls.home}/` }, "VC Lab") : h("span", { class: "lab-name" }, "VC Lab"),
     h("nav", { "aria-label": "Lab apps" }, apps.filter(([k]) => urls[k] || k === current).map(([k, label]) =>
       h("a", { href: k === current ? "./" : `${urls[k]}/`, "aria-current": k === current ? "page" : null }, h("span", { class: `pip ${k}` }), label))));
   return urls;

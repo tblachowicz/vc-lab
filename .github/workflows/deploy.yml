@@ -1,7 +1,8 @@
-# Deploys VC Lab on every push to main, all three apps as Cloudflare Workers on custom domains:
-#   issuer   -> vc-issuer.loft70.net
-#   wallet   -> vc-wallet.loft70.net   (static assets only)
-#   verifier -> vc-verifier.loft70.net
+# Deploys VC Lab on every push to main, as Cloudflare Workers on custom domains:
+#   home     -> vc-lab.loft70.net          (static assets only)
+#   issuer   -> vc-lab-issuer.loft70.net
+#   wallet   -> vc-lab-wallet.loft70.net   (static assets only)
+#   verifier -> vc-lab-verifier.loft70.net
 # The hostnames are also the "routes" in deploy/*.jsonc; change both together.
 # Needs repo secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID, and loft70.net as a zone on that account.
 name: Deploy
@@ -19,9 +20,10 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  ISSUER_URL: https://vc-issuer.loft70.net
-  WALLET_URL: https://vc-wallet.loft70.net
-  VERIFIER_URL: https://vc-verifier.loft70.net
+  HOME_URL: https://vc-lab.loft70.net
+  ISSUER_URL: https://vc-lab-issuer.loft70.net
+  WALLET_URL: https://vc-lab-wallet.loft70.net
+  VERIFIER_URL: https://vc-lab-verifier.loft70.net
 
 jobs:
   deploy:
@@ -67,15 +69,19 @@ jobs:
       - name: Deploy the wallet
         run: npx wrangler deploy -c deploy/wallet.jsonc
 
+      - name: Deploy the home page
+        run: npx wrangler deploy -c deploy/home.jsonc
+
       - name: Smoke test
         run: |
           # A brand-new custom domain can take a minute to get its certificate.
-          for url in "$ISSUER_URL/.well-known/openid-credential-issuer" "$WALLET_URL/offer" "$VERIFIER_URL/"; do
+          for url in "$HOME_URL/" "$ISSUER_URL/.well-known/openid-credential-issuer" "$WALLET_URL/offer" "$VERIFIER_URL/"; do
             curl -fsS -o /dev/null --retry 10 --retry-delay 6 --retry-all-errors "$url"
           done
           {
             echo "| App | URL |"
             echo "|-----|-----|"
+            echo "| Home | $HOME_URL |"
             echo "| Issuer | $ISSUER_URL |"
             echo "| Wallet | $WALLET_URL |"
             echo "| Verifier | $VERIFIER_URL |"

@@ -10,8 +10,8 @@ import { start } from "../scripts/serve.js";
 // it tests already-running apps instead (e.g. `wrangler dev` workers and a built wallet).
 const external = !!process.env.E2E_ISSUER_URL;
 const urls = external
-  ? { issuerUrl: process.env.E2E_ISSUER_URL, walletUrl: process.env.E2E_WALLET_URL, verifierUrl: process.env.E2E_VERIFIER_URL }
-  : { issuerUrl: "http://localhost:4201", walletUrl: "http://localhost:4202", verifierUrl: "http://localhost:4203" };
+  ? { homeUrl: process.env.E2E_HOME_URL, issuerUrl: process.env.E2E_ISSUER_URL, walletUrl: process.env.E2E_WALLET_URL, verifierUrl: process.env.E2E_VERIFIER_URL }
+  : { homeUrl: "http://localhost:4200", issuerUrl: "http://localhost:4201", walletUrl: "http://localhost:4202", verifierUrl: "http://localhost:4203" };
 const shots = process.env.SHOTS;
 const lab = external ? { close: async () => {} } : await start({ ...urls, keyFile: join(await mkdtemp(join(tmpdir(), "vclab-")), "k.json") });
 const browser = await chromium.launch(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {});
@@ -24,6 +24,16 @@ const pill = () => page.locator("#trace .status-pill").textContent();
 const assert = (cond, msg) => { if (!cond) throw new Error(`FAIL: ${msg}`); console.log(`ok  ${msg}`); };
 
 try {
+  // Home page links to the three apps
+  if (urls.homeUrl) {
+    await page.goto(`${urls.homeUrl}/`);
+    await page.waitForSelector('a[data-app="issuer"][href]');
+    await shot("0-home");
+    await page.click('a[data-app="issuer"]');
+    await page.waitForURL(`${urls.issuerUrl}/`);
+    assert(true, "home page links to the issuer");
+  }
+
   // Issue
   await page.goto(`${urls.issuerUrl}/`);
   await page.fill("#name", "Grace Hopper");
