@@ -73,7 +73,7 @@ The servers export `handle(Request) → Response`, the Fetch API shape, and keep
 
 ## Deploy
 
-`.github/workflows/deploy.yml` deploys on every push to `main`, as Cloudflare Workers on routes in the `loft70.net` zone:
+`.github/workflows/deploy.yml` deploys on every push to `main`, as Cloudflare Workers on custom domains:
 
 | App | URL |
 |-----|-----|
@@ -84,17 +84,14 @@ The servers export `handle(Request) → Response`, the Fetch API shape, and keep
 
 The hostnames appear twice: as `routes` in `deploy/*.jsonc` and as the URLs at the top of the workflow. Change both together. `workers.dev` and preview URLs are switched off.
 
-The Workers use routes rather than Workers custom domains on purpose. Each custom domain gets its own certificate; Safari reuses one HTTP/2 connection across the lab's hostnames and then gets `421 Misdirected Request`. On routes, all four hostnames share the zone's Universal certificate (`*.loft70.net`).
-
 The issuer and verifier run the same handlers as locally, each inside one Durable Object that gives it persistent storage (`deploy/`). The issuer creates its signing key on first use and keeps it there, so no key needs to be managed. The verifier reaches the issuer's key metadata through a service binding, because one Worker on an account can't fetch another of its Workers over the internet. Everything fits the free plans.
 
 One-time setup:
 
-1. **Domain:** add the domain to Cloudflare (**Add a site**, free plan) and switch its nameservers at the registrar to the two Cloudflare gives you. Routes need the zone to be active on the same account.
+1. **Domain:** add the domain to Cloudflare (**Add a site**, free plan) and switch its nameservers at the registrar to the two Cloudflare gives you. Custom domains on Workers need the zone to be active on the same account.
 2. **API token:** **My Profile → API Tokens → Create Token → "Edit Cloudflare Workers"** template, covering your account and the domain's zone. Note your **Account ID** (the 32-character string in the dashboard URL).
 3. **GitHub secrets:** in the repo, **Settings → Secrets and variables → Actions**. Add `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
-4. **DNS records:** routes don't create DNS records, so add one per hostname under **DNS → Records**: type `AAAA`, name `vc-lab`, `vc-lab-issuer`, `vc-lab-wallet` or `vc-lab-verifier`, IPv6 address `100::`, **Proxied**. `100::` is a placeholder: the Worker answers every request, so nothing is ever sent there.
-5. Push to `main`, or run **Actions → Deploy → Run workflow**. The run summary lists the URLs.
+4. Push to `main`, or run **Actions → Deploy → Run workflow**. Cloudflare creates the DNS records and certificates for the three hostnames; the run summary lists the URLs.
 
 To try the Cloudflare build locally, build with local URLs and run the three Workers under `wrangler dev` (issuer 8787, verifier 8788, wallet 8789, the wallet with its own `--persist-to` folder). `test/e2e.js` can then test them through `E2E_ISSUER_URL`, `E2E_WALLET_URL` and `E2E_VERIFIER_URL`.
 

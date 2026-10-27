@@ -1,4 +1,4 @@
-# Deploys VC Lab on every push to main, as Cloudflare Workers on routes in the loft70.net zone:
+# Deploys VC Lab on every push to main, as Cloudflare Workers on custom domains:
 #   home     -> vc-lab.loft70.net          (static assets only)
 #   issuer   -> vc-lab-issuer.loft70.net
 #   wallet   -> vc-lab-wallet.loft70.net   (static assets only)
@@ -74,7 +74,7 @@ jobs:
 
       - name: Smoke test
         run: |
-          # A new hostname can take a moment to resolve and get its route.
+          # A brand-new custom domain can take a minute to get its certificate.
           for url in "$HOME_URL/" "$ISSUER_URL/.well-known/openid-credential-issuer" "$WALLET_URL/offer" "$VERIFIER_URL/"; do
             curl -fsS -o /dev/null --retry 10 --retry-delay 6 --retry-all-errors "$url"
           done
