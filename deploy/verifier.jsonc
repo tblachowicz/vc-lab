@@ -6,7 +6,9 @@
   // Served only on the custom domain: workers.dev and preview URLs would show the account name.
   "workers_dev": false,
   "preview_urls": false,
-  "routes": [{ "pattern": "vc-lab-verifier.loft70.net", "custom_domain": true }],
+  // A route, not a custom domain: custom domains each get their own certificate, and Safari then fails
+  // with 421 when it reuses a connection across the lab's hostnames. Needs a proxied DNS record (AAAA 100::).
+  "routes": [{ "pattern": "vc-lab-verifier.loft70.net/*", "zone_name": "loft70.net" }],
   "assets": { "directory": "../dist/verifier", "binding": "ASSETS" },
   "durable_objects": { "bindings": [{ "name": "STATE", "class_name": "VerifierState" }] },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["VerifierState"] }],
