@@ -1,9 +1,9 @@
 # Deploys VC Lab on every push to main, all three apps as Cloudflare Workers on custom domains:
-#   issuer   -> vc-issuer.loft70.pro
-#   wallet   -> vc-wallet.loft70.pro   (static assets only)
-#   verifier -> vc-verifier.loft70.pro
+#   issuer   -> vc-issuer.loft70.net
+#   wallet   -> vc-wallet.loft70.net   (static assets only)
+#   verifier -> vc-verifier.loft70.net
 # The hostnames are also the "routes" in deploy/*.jsonc; change both together.
-# Needs repo secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID, and loft70.pro as a zone on that account.
+# Needs repo secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID, and loft70.net as a zone on that account.
 name: Deploy
 
 on:
@@ -19,9 +19,9 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  ISSUER_URL: https://vc-issuer.loft70.pro
-  WALLET_URL: https://vc-wallet.loft70.pro
-  VERIFIER_URL: https://vc-verifier.loft70.pro
+  ISSUER_URL: https://vc-issuer.loft70.net
+  WALLET_URL: https://vc-wallet.loft70.net
+  VERIFIER_URL: https://vc-verifier.loft70.net
 
 jobs:
   deploy:

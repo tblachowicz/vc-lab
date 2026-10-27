@@ -75,9 +75,9 @@ The servers export `handle(Request) → Response`, the Fetch API shape, and keep
 
 | App | URL |
 |-----|-----|
-| Issuer | https://vc-issuer.loft70.pro |
-| Wallet | https://vc-wallet.loft70.pro (static assets only) |
-| Verifier | https://vc-verifier.loft70.pro |
+| Issuer | https://vc-issuer.loft70.net |
+| Wallet | https://vc-wallet.loft70.net (static assets only) |
+| Verifier | https://vc-verifier.loft70.net |
 
 The hostnames appear twice: as `routes` in `deploy/*.jsonc` and as the URLs at the top of the workflow. Change both together. `workers.dev` and preview URLs are switched off.
 
